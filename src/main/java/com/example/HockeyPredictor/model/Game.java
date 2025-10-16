@@ -1,7 +1,6 @@
 package com.example.HockeyPredictor.model;
 
 import jakarta.persistence.*;
-
 import java.time.LocalDate;
 
 @Entity
@@ -12,28 +11,38 @@ public class Game {
     private Long id;
 
     @ManyToOne
-    private Team teamA;
+    @JoinColumn(name="home_team_id")
+    private Team homeTeam;
 
     @ManyToOne
-    private Team teamB;
+    @JoinColumn(name="away_team_id")
+    private Team awayTeam;
 
-    private LocalDate gameDate;
+    private int homeTeamGoals;
+    private int awayTeamGoals;
 
-    // Constructors
+    private LocalDate date;
+
     public Game() {}
 
-    public Game(Team teamA, Team teamB, LocalDate gameDate) {
-        this.teamA = teamA;
-        this.teamB = teamB;
-        this.gameDate = gameDate;
+    public Game(Team homeTeam, Team awayTeam, int homeTeamGoals, int awayTeamGoals, LocalDate date) {
+        this.homeTeam = homeTeam;
+        this.awayTeam = awayTeam;
+        this.homeTeamGoals = homeTeamGoals;
+        this.awayTeamGoals = awayTeamGoals;
+        this.date = date;
     }
 
-    // Getters & Setters
+    // Getters and Setters
     public Long getId() { return id; }
-    public Team getTeamA() { return teamA; }
-    public void setTeamA(Team teamA) { this.teamA = teamA; }
-    public Team getTeamB() { return teamB; }
-    public void setTeamB(Team teamB) { this.teamB = teamB; }
-    public LocalDate getGameDate() { return gameDate; }
-    public void setGameDate(LocalDate gameDate) { this.gameDate = gameDate; }
+    public Team getHomeTeam() { return homeTeam; }
+    public void setHomeTeam(Team homeTeam) { this.homeTeam = homeTeam; }
+    public Team getAwayTeam() { return awayTeam; }
+    public void setAwayTeam(Team awayTeam) { this.awayTeam = awayTeam; }
+    public int getHomeTeamGoals() { return homeTeamGoals; }
+    public void setHomeTeamGoals(int goals) { this.homeTeamGoals = goals; }
+    public int getAwayTeamGoals() { return awayTeamGoals; }
+    public void setAwayTeamGoals(int goals) { this.awayTeamGoals = goals; }
+    public LocalDate getDate() { return date; }
+    public void setDate(LocalDate date) { this.date = date; }
 }

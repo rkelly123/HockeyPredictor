@@ -1,67 +1,53 @@
 package com.example.HockeyPredictor;
 
 import com.example.HockeyPredictor.model.Team;
+import com.example.HockeyPredictor.model.Game;
 import com.example.HockeyPredictor.repository.TeamRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.HockeyPredictor.repository.GameRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+
+import java.time.LocalDate;
 
 @SpringBootApplication
-public class HockeyPredictorApplication implements CommandLineRunner {
-
-    @Autowired
-    private TeamRepository teamRepository;
+public class HockeyPredictorApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(HockeyPredictorApplication.class, args);
     }
 
-    @Override
-    public void run(String... args) throws Exception {
-        // Create sample teams
-        Team team1 = new Team(
-                "Sharks",
-                10, // wins
-                5,  // losses
-                2,  // overtimeLosses
-                35, // goalsFor
-                28, // goalsAgainst
-                400, // corsiFor
-                380, // fenwickFor
-                300, // shotsFor
-                150, // hits
-                20,  // giveaways
-                25   // takeaways
-        );
+    @Bean
+    CommandLineRunner initDatabase(TeamRepository teamRepository, GameRepository gameRepository) {
+        return args -> {
+            // Sample teams with all required fields
+            Team sharks = new Team(
+                    "San Jose Sharks", 5, 2, 1, 20, 15, 200, 180, 150, 100, 50, 40);
+            Team penguins = new Team(
+                    "Pittsburgh Penguins", 4, 3, 1, 18, 17, 190, 170, 160, 110, 45, 38);
+            Team bruins = new Team(
+                    "Boston Bruins", 6, 1, 1, 22, 14, 210, 185, 155, 120, 48, 42);
+            Team mapleLeafs = new Team(
+                    "Toronto Maple Leafs", 3, 4, 1, 17, 19, 180, 160, 148, 105, 52, 36);
 
-        Team team2 = new Team(
-                "Penguins",
-                12,
-                3,
-                1,
-                40,
-                25,
-                420,
-                400,
-                310,
-                160,
-                18,
-                22
-        );
+            // Save teams
+            teamRepository.save(sharks);
+            teamRepository.save(penguins);
+            teamRepository.save(bruins);
+            teamRepository.save(mapleLeafs);
 
-        // Save teams to H2
-        teamRepository.save(team1);
-        teamRepository.save(team2);
+            // Sample games
+            Game game1 = new Game(sharks, penguins, 3, 2, LocalDate.of(2025, 10, 15));
+            Game game2 = new Game(bruins, mapleLeafs, 1, 4, LocalDate.of(2025, 10, 16));
+            Game game3 = new Game(penguins, bruins, 2, 2, LocalDate.of(2025, 10, 17));
 
-        // Print all teams
-        System.out.println("Teams saved:");
-        teamRepository.findAll().forEach(t -> 
-            System.out.println(
-                t.getName() + " | W:" + t.getWins() + " L:" + t.getLosses() +
-                " OTL:" + t.getOvertimeLosses() + " GF:" + t.getGoalsFor() +
-                " GA:" + t.getGoalsAgainst() + " GD:" + t.getGoalDifferential()
-            )
-        );
+            // Save games
+            gameRepository.save(game1);
+            gameRepository.save(game2);
+            gameRepository.save(game3);
+
+            System.out.println("Sample data loaded!");
+        };
     }
 }
