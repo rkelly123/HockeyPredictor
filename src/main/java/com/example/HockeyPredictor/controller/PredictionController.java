@@ -7,8 +7,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Optional;
-
 @RestController
 public class PredictionController {
 
@@ -23,19 +21,16 @@ public class PredictionController {
     @GetMapping("/api/predict")
     public String predictGame(
             @RequestParam Long teamAId,
-            @RequestParam Long teamBId
-    ) {
-        Optional<Team> teamAOpt = teamRepository.findById(teamAId);
-        Optional<Team> teamBOpt = teamRepository.findById(teamBId);
+            @RequestParam Long teamBId) {
+        Team teamA = teamRepository.findById(teamAId).orElse(null);
+        Team teamB = teamRepository.findById(teamBId).orElse(null);
 
-        if (teamAOpt.isEmpty() || teamBOpt.isEmpty()) {
+        if (teamA == null || teamB == null) {
             return "One or both team IDs not found.";
         }
 
-        Team teamA = teamAOpt.get();
-        Team teamB = teamBOpt.get();
-
-        String winner = predictionService.predictWinner(teamA, teamB);
-        return "Predicted winner: " + winner;
+        // Delegate all logic to the service
+        return predictionService.predictGameWithScores(teamA, teamB);
     }
+
 }
