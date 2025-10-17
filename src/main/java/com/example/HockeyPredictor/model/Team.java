@@ -20,18 +20,32 @@ public class Team {
     private int goalsFor;
     private int goalsAgainst;
     private int goalDifferential;
-    private int corsiFor;
-    private int fenwickFor;
     private int shotsFor;
+    private int shotsAgainst;
     private int hits;
+    private int powerplays;
+    private int penalties;
+    private double powerplayPercentage;
+    private double penaltyKillPercentage;
+    private double savePercentage;
     private int giveaways;
     private int takeaways;
+
+    private int corsiFor;
+    private int fenwickFor;
+    private int corsiAgainst;
+    private int fenwickAgainst;
+    private int opponentsCorsiFor;
+    private int opponentsFenwickFor;
 
     // Constructors
     public Team() {}
 
     public Team(String name, int wins, int losses, int overtimeLosses, int goalsFor, int goalsAgainst,
-                int corsiFor, int fenwickFor, int shotsFor, int hits, int giveaways, int takeaways) {
+            int shotsFor, int shotsAgainst, int hits, int powerplays, int penalties,
+            double powerplayPercentage, double penaltyKillPercentage, double savePercentage, int giveaways,
+            int takeaways, int corsiFor, int fenwickFor, int corsiAgainst, int fenwickAgainst, int opponentsCorsiFor,
+            int opponentsFenwickFor) {
         this.name = name;
         this.wins = wins;
         this.losses = losses;
@@ -42,8 +56,18 @@ public class Team {
         this.goalDifferential = goalsFor - goalsAgainst;
         this.corsiFor = corsiFor;
         this.fenwickFor = fenwickFor;
+        this.corsiAgainst = corsiAgainst;
+        this.fenwickAgainst = fenwickAgainst;
+        this.opponentsCorsiFor = opponentsCorsiFor;
+        this.opponentsFenwickFor = opponentsFenwickFor;
         this.shotsFor = shotsFor;
+        this.shotsAgainst = shotsAgainst;
         this.hits = hits;
+        this.powerplays = powerplays;
+        this.penalties = penalties;
+        this.powerplayPercentage = powerplayPercentage;
+        this.penaltyKillPercentage = penaltyKillPercentage;
+        this.savePercentage = savePercentage;
         this.giveaways = giveaways;
         this.takeaways = takeaways;
     }
@@ -70,10 +94,30 @@ public class Team {
     public void setCorsiFor(int corsiFor) { this.corsiFor = corsiFor; }
     public int getFenwickFor() { return fenwickFor; }
     public void setFenwickFor(int fenwickFor) { this.fenwickFor = fenwickFor; }
+    public int getCorsiAgainst() { return corsiAgainst; }
+    public void setCorsiAgainst(int corsiAgainst) { this.corsiAgainst = corsiAgainst; }
+    public int getFenwickAgainst() { return fenwickAgainst; }
+    public void setFenwickAgainst(int fenwickAgainst) { this.fenwickAgainst = fenwickAgainst; }
+    public int getOpponentsCorsiFor() { return opponentsCorsiFor; }
+    public void setOpponentsCorsiFor(int opponentCorsiFor) { this.opponentsCorsiFor = opponentCorsiFor; }
+    public int getOpponentsFenwickFor() { return opponentsFenwickFor; }
+    public void setOpponentsFenwickFor(int opponentsFenwickFor) { this.opponentsFenwickFor = opponentsFenwickFor; }
     public int getShotsFor() { return shotsFor; }
     public void setShotsFor(int shotsFor) { this.shotsFor = shotsFor; }
+    public int getShotsAgainst() { return shotsAgainst; }
+    public void setShotsAgainst(int shotsAgainst) { this.shotsAgainst = shotsAgainst; }
     public int getHits() { return hits; }
     public void setHits(int hits) { this.hits = hits; }
+    public int getPowerplays() { return powerplays; }
+    public void setPowerplays(int powerplays) { this.powerplays = powerplays; }
+    public int getPenalties() { return penalties; }
+    public void setPenalties(int penalties) { this.penalties = penalties; }
+    public double getPowerplayPercentage() { return powerplayPercentage; }
+    public void setPowerplayPercentage(double powerplayPercentage) { this.powerplayPercentage = powerplayPercentage; }
+    public double getPenaltyKillPercentage() { return penaltyKillPercentage; }
+    public void setPenaltyKillPercentage(double penaltyKillPercentage) { this.penaltyKillPercentage = penaltyKillPercentage; }
+    public double getSavePercentage() { return savePercentage; }
+    public void setSavePercentage(double savePercentage) { this.savePercentage = savePercentage; }
     public int getGiveaways() { return giveaways; }
     public void setGiveaways(int giveaways) { this.giveaways = giveaways; }
     public int getTakeaways() { return takeaways; }
