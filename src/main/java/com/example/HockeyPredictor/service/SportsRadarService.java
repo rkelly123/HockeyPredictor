@@ -160,6 +160,7 @@ public class SportsRadarService {
                         team.setHits(statisticsOwnTotal.path("hits").asInt(team.getHits()));
                         team.setGiveaways(statisticsOwnTotal.path("giveaways").asInt(team.getGiveaways()));
                         team.setTakeaways(statisticsOwnTotal.path("takeaways").asInt(team.getTakeaways()));
+                        team.setShotsFor(statisticsOwnTotal.path("shots").asInt(team.getShotsFor()));
                         team.setPowerplayPercentage(statisticsPowerplayTotal.path("percentage").asDouble(team.getPowerplayPercentage()));
                         team.setPenaltyKillPercentage(statisticsPenaltyTotal.path("kill_pct").asDouble(team.getPenaltyKillPercentage()));
                         team.setWins(statisticsGoaltendingTotal.path("wins").asInt(team.getWins()));

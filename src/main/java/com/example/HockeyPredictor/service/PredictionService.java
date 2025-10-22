@@ -14,60 +14,44 @@ import java.util.List;
 @Service
 public class PredictionService {
 
-    // Tunable coefficients — chosen by combining domain intuition + analytic indications.
-    // Comments explain why each weight has this relative importance.
+    // Tunable category weights (derived from analytics and hockey metrics studies)
+    private static final double WIN_PCT_WEIGHT = 0.30;       // Overall success rate
+    private static final double GOAL_DIFF_WEIGHT = 0.12;     // Strong predictor of true talent
+    private static final double SAVE_PCT_WEIGHT = 0.08;      // Goaltending stability
+    private static final double SPECIAL_TEAMS_WEIGHT = 0.12; // Power play & PK effect
+    private static final double SHOTS_FOR_WEIGHT = 0.03;     // Offensive pressure
+    private static final double SHOTS_AGAINST_WEIGHT = 0.03; // Defensive consistency
+    private static final double CORSI_DIFF_WEIGHT = 0.06;    // Possession control
+    private static final double FENWICK_DIFF_WEIGHT = 0.06;  // Shot quality proxy
+    private static final double HITS_PEN_WEIGHT = 0.06;      // Physicality vs. discipline
+    private static final double TURNOVERS_WEIGHT = 0.08;     // Puck management
 
-    private static final double WIN_PCT_WEIGHT      = 0.25;  // Win % is a strong fundamental indicator of team quality.
-    private static final double GOAL_DIFF_WEIGHT    = 0.20;  // Goal differential has been shown to explain ~90% of team winning variance. :contentReference[oaicite:0]{index=0}
-    private static final double SAVE_PCT_WEIGHT    = 0.10;  // Goalie / team save percentage matters for preventing goals.
-    private static final double SPECIAL_TEAMS_WEIGHT = 0.15; // Power play + penalty kill performance influences tight games significantly.
-    private static final double SHOTS_FOR_WEIGHT   = 0.06;  // Shots for proxies offensive generation.
-    private static final double CORSI_DIFF_WEIGHT  = 0.10;  // Possession metrics (Corsi/Fenwick) indicate control of play. :contentReference[oaicite:1]{index=1}
-    private static final double HITS_PEN_WEIGHT    = 0.04;  // Hits vs. penalties reflect physicality/discipline – lower predictive power but usable.
-    private static final double SHOTS_AGAINST_WEIGHT = 0.04;// Allowing fewer shots is part of defensive performance.
-    private static final double TURNOVERS_WEIGHT   = 0.06;  // Winning the turnover battle imples strong control of the game.
+    private static final double HOME_ADVANTAGE = 0.06;       // ~5% home edge
+    private static final double LOGISTIC_K = 1.25;           // Reasonable steepness for diff→prob
 
-    // Home ice advantage
-    private static final double HOME_ADVANTAGE      = 0.05;  // Approx +5% baseline advantage for home team.
-
-    // logistic scale factor for difference -> probability mapping
-    private static final double LOGISTIC_K          = 3.5;  // moderate steepness
-
-    /**
-     * Predicts all games in the list for a given date, writes to file and returns the results.
-     */
     public List<GamePredictionResult> predictGamesForDate(List<Game> gamesForDate) {
         List<GamePredictionResult> results = new ArrayList<>();
+
         for (Game g : gamesForDate) {
             Team home = g.getHomeTeam();
             Team away = g.getAwayTeam();
-            if (home == null || away == null) {
-                continue;
-            }
+            if (home == null || away == null) continue;
 
-            double ratingHome = computeTeamRating(home, /*isHome=*/ true);
-            double ratingAway = computeTeamRating(away, /*isHome=*/ false);
+            double ratingHome = computeTeamRating(home, true);
+            double ratingAway = computeTeamRating(away, false);
 
             double diff = ratingHome - ratingAway;
             double probabilityHome = logisticProbability(diff);
             double probabilityAway = 1.0 - probabilityHome;
 
-            String predictedWinner;
-            double winnerProb;
-            if (probabilityHome > probabilityAway) {
-                predictedWinner = home.getName();
-                winnerProb = probabilityHome;
-            } else if (probabilityAway > probabilityHome) {
-                predictedWinner = away.getName();
-                winnerProb = probabilityAway;
-            } else {
-                predictedWinner = "Too close to call";
-                winnerProb = Math.max(probabilityHome, probabilityAway);
-            }
+            String predictedWinner = (probabilityHome > probabilityAway)
+                    ? home.getName()
+                    : away.getName();
 
+            double winnerProb = Math.max(probabilityHome, probabilityAway);
             String americanOdds = convertProbabilityToAmericanOdds(winnerProb);
 
-            String notes = generateNotes(home, away, ratingHome, ratingAway, probabilityHome, probabilityAway, g);
+            String notes = generateNotes(home, away, ratingHome, ratingAway, probabilityHome, probabilityAway);
 
             GamePredictionResult res = new GamePredictionResult(
                     g.getId(),
@@ -90,78 +74,59 @@ public class PredictionService {
         return results;
     }
 
-    /**
-     * Composite team rating. 
-     *    Many stats normalized by season-typical values so newer seasons/games still compare.
-     */
     private double computeTeamRating(Team t, boolean isHome) {
-        int gamesPlayed = t.getWins() + t.getLosses() + t.getOvertimeLosses();
-        int totalGames = 84;
-        double averageCorsi = 5000.0;
-        double averageFenwick = 3000.0;
-        double averageShots = 2000.0;
+        int gamesPlayed = Math.max(1, t.getWins() + t.getLosses() + t.getOvertimeLosses());
+        double averageGoalDiff = 0.6;
         double averageSavePct = 0.900;
-        double averageGoalDifferential = 50.0;
+        double averageShots = 35.0;
+        double magnitudeScaler = 10.0;
+        double halfMagnitudeScaler = 5.0;
 
-        // Win percentage
-        double winPct = safeRatio(t.getWins(), (t.getWins() + t.getLosses() + t.getOvertimeLosses()));
+        // Per-game metrics to stabilize early in season
+        double goalsPerGameDiff = (double) t.getGoalDifferential() / gamesPlayed;
+        double shotsForPerGame = (double) t.getShotsFor() / gamesPlayed;
+        double shotsAgainstPerGame = (double) t.getShotsAgainst() / gamesPlayed;
+        double corsiDiffPerGame = (double) (t.getCorsiFor() - t.getCorsiAgainst()) / gamesPlayed;
+        double fenwickDiffPerGame = (double) (t.getFenwickFor() - t.getFenwickAgainst()) / gamesPlayed;
+        double hitsPerGame = (double) t.getHits() / gamesPlayed;
+        double penaltiesPerGame = (double) t.getPenalties() / gamesPlayed;
+        double turnoversPerGame = (double) (t.getTakeaways() - t.getGiveaways()) / gamesPlayed;
 
-        // Goal differential: scale by ~50 goals per season (for top teams). Hence divide by 50.0.
-        // If teams are early in the season, this still normalizes to comparable scale.
-        double goalDiff   = t.getGoalDifferential() / ((averageGoalDifferential / totalGames) * gamesPlayed);
+        // Normalize to approximate real hockey scale
+        double winPct = safeRatio(t.getWins(), t.getWins() + t.getLosses() + t.getOvertimeLosses());
+        double goalDiff = goalsPerGameDiff / averageGoalDiff;
+        double savePct = (t.getSavePercentage() - averageSavePct) / 0.04;
+        double specialTeams = ((t.getPowerplayPercentage() + t.getPenaltyKillPercentage()) / 2.0) / 100.0;
+        double shotsFor = shotsForPerGame / averageShots;
+        double shotsAgainst = ((1.5 * averageShots) - shotsAgainstPerGame) / averageShots; // Get 'half-points' at average
+        double corsiDiff = corsiDiffPerGame / magnitudeScaler;
+        double fenwickDiff = fenwickDiffPerGame / magnitudeScaler;
+        double hitsPen = (hitsPerGame / (penaltiesPerGame + 1.0)) / halfMagnitudeScaler;
+        double turnovers = turnoversPerGame / magnitudeScaler;
 
-        // Save percentage: typically around .900; shift by subtracting .900 then divide by .020 to get ~0–1 scale.
-        double savePct    = (t.getSavePercentage() - averageSavePct) / 0.020;
+        double rating =
+                WIN_PCT_WEIGHT * winPct +
+                GOAL_DIFF_WEIGHT * goalDiff +
+                SAVE_PCT_WEIGHT * savePct +
+                SPECIAL_TEAMS_WEIGHT * specialTeams +
+                SHOTS_FOR_WEIGHT * shotsFor +
+                SHOTS_AGAINST_WEIGHT * shotsAgainst +
+                CORSI_DIFF_WEIGHT * corsiDiff +
+                FENWICK_DIFF_WEIGHT * fenwickDiff +
+                HITS_PEN_WEIGHT * hitsPen +
+                TURNOVERS_WEIGHT * turnovers;
 
-        // Special teams: combine powerplay % and penalty kill %; assume values ~0.15–0.90 scale; average.
-        double specialTeams = ((t.getPowerplayPercentage()) + (t.getPenaltyKillPercentage())) / 200.0;
+        if (isHome) rating += HOME_ADVANTAGE;
 
-        // Shots for: typical season ~2000 shots; normalize
-        double shotsFor   = t.getShotsFor() / ((averageShots / totalGames) * gamesPlayed);
+        double progressionFactor = Math.min(1.0, (1 + (gamesPlayed / 10)) / 3.0); // full weight after 30 games, avoid early overreactions
+        rating *= progressionFactor;
 
-        // Shots against: typical season shots against ~2000; we invert to reward fewer allowed shots
-        double shotsAgainst = (((averageShots / totalGames) * gamesPlayed) - t.getShotsAgainst()) / ((averageShots / totalGames) * gamesPlayed);
-
-        // Corsi differential: (CorsiFor – CorsiAgainst) normalized by ~5000 (season attempts)
-        double corsiDiff   = ((double)(t.getCorsiFor() - t.getCorsiAgainst())) / ((averageCorsi / totalGames) * gamesPlayed);
-
-        // Fenwick differential: (FenwickFor – FenwickAgainst) normalized by ~3000 attempts
-        double fenwickDiff = ((double)(t.getFenwickFor() - t.getFenwickAgainst())) / ((averageFenwick / totalGames) * gamesPlayed);
-
-        // Hits vs penalties: we assume more hits is positive (physical dominance), more penalties is negative:
-        double hitsPen    = ((double)t.getHits() / (t.getPenalties() + 1.0)) / 100.0;
-
-        // Opponent Corsi for: fewer opponent Corsi better: normalize ~5000 attempts
-        double oppCorsiFor = ((double)(t.getOpponentsCorsiFor())) / ((averageCorsi / totalGames) * gamesPlayed);
-
-        double netTurnovers = ((double)(t.getTakeaways() - t.getGiveaways()));
-
-        // Now build weighted rating
-        double rating = 0.0;
-        rating += WIN_PCT_WEIGHT         * winPct;
-        rating += GOAL_DIFF_WEIGHT       * goalDiff;
-        rating += SAVE_PCT_WEIGHT        * savePct;
-        rating += SPECIAL_TEAMS_WEIGHT   * specialTeams;
-        rating += SHOTS_FOR_WEIGHT       * shotsFor;
-        rating += SHOTS_AGAINST_WEIGHT   * shotsAgainst;
-        rating += CORSI_DIFF_WEIGHT      * corsiDiff;
-        rating += CORSI_DIFF_WEIGHT      * fenwickDiff;
-        rating += HITS_PEN_WEIGHT        * hitsPen;
-        rating += CORSI_DIFF_WEIGHT      * (1.0 - oppCorsiFor);
-        rating += TURNOVERS_WEIGHT       * netTurnovers;
-
-        if (isHome) {
-            rating += HOME_ADVANTAGE;
-        }
-
-        return rating;
+        // Keep rating in sensible range
+        return Math.max(-2, Math.min(2, rating));
     }
 
-    private double safeRatio(int numerator, int denominator) {
-        if (denominator <= 0) {
-            return 0.5; // unknown -> neutral 0.5
-        }
-        return ((double) numerator) / denominator;
+    private double safeRatio(int num, int denom) {
+        return denom == 0 ? 0.5 : (double) num / denom;
     }
 
     private double logisticProbability(double diff) {
@@ -169,27 +134,18 @@ public class PredictionService {
     }
 
     private String convertProbabilityToAmericanOdds(double p) {
-        if (p <= 0.0) p = 0.001;
-        if (p >= 1.0) p = 0.999;
-        if (p > 0.5) {
-            double odds = (p / (1.0 - p)) * 100.0;
-            return String.format("-%d", Math.round(odds));
-        } else {
-            double odds = ((1.0 - p) / p) * 100.0;
-            return String.format("+%d", Math.round(odds));
-        }
+        p = Math.max(0.001, Math.min(0.999, p));
+        double odds = (p > 0.5)
+                ? -100 * (p / (1 - p))
+                : 100 * ((1 - p) / p);
+        return String.format("%+d", Math.round(odds));
     }
 
     private String generateNotes(Team home, Team away, double ratingHome, double ratingAway,
-                                 double probHome, double probAway, Game g) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(String.format("Home rating: %.3f, Away rating: %.3f. ", ratingHome, ratingAway));
-        sb.append(String.format("HomeProb: %.3f, AwayProb: %.3f. ", probHome, probAway));
-        if (Math.abs(ratingHome - ratingAway) > 0.30) {
-            sb.append("Large rating gap. ");
-        }
-        // Can add extra notes here if desired
-        // sb.append(String.format("Season shotsFor home: %d vs away: %d. ", home.getShotsFor(), away.getShotsFor()));
-        return sb.toString();
+                                 double probHome, double probAway) {
+        return String.format(
+                "Home rating: %.3f, Away rating: %.3f. HomeProb: %.3f, AwayProb: %.3f.",
+                ratingHome, ratingAway, probHome, probAway
+        );
     }
 }
