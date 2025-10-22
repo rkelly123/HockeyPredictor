@@ -18,4 +18,10 @@ public class DataUpdateController {
         sportsRadarService.updateAllFromSportsRadar();
         return "Data update triggered. Check logs for details.";
     }
+
+    @GetMapping("/api/update-matchups")
+    public String updateMatchups() {
+        sportsRadarService.fetchAndPopulateGamesForToday();
+        return "Data update triggered. Check logs for details.";
+    }
 }
