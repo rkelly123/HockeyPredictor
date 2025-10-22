@@ -1,0 +1,12 @@
+New Jersey Devils Vs. Minnesota Wild
+Winner: New Jersey Devils (-333)
+Notes: Home rating: -3.597, Away rating: -3.941. HomeProb: 0.769, AwayProb: 0.231. Large rating gap. 
+
+Buffalo Sabres Vs. Detroit Red Wings
+Winner: Detroit Red Wings (-190)
+Notes: Home rating: -3.926, Away rating: -3.743. HomeProb: 0.345, AwayProb: 0.655. 
+
+Calgary Flames Vs. Montreal Canadiens
+Winner: Montreal Canadiens (-31058)
+Notes: Home rating: -5.007, Away rating: -3.367. HomeProb: 0.003, AwayProb: 0.997. Large rating gap. 
+
